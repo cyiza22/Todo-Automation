@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Prompts;
 
+use App\Models\Todo;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Prompt;
@@ -13,7 +14,7 @@ class DailySummaryPrompt extends Prompt
      * The prompt's description.
      */
     protected string $description = <<<'MARKDOWN'
-        A description of what this prompt does.
+       provides a daily summary of the tasks
     MARKDOWN;
 
     /**
@@ -22,8 +23,12 @@ class DailySummaryPrompt extends Prompt
     public function handle(Request $request): Response
     {
 
-        return Response::text("Please use the `list_todos` tool to check for tasks due on {\$arguments['date']}. " .
-            "Then, write a bulleted summary grouped by status. Keep the tone professional.");
+        return Response::json(
+            [
+                "message" => "This is a daily summary for the date: {$request->get('date')}",
+                "tasks" => Todo::where('completed', false)->where('created_at', '<=', $request->get('date'))->get(),
+            ]
+        );
     }
 
     /**
@@ -34,9 +39,11 @@ class DailySummaryPrompt extends Prompt
     public function arguments(): array
     {
         return [
-            Argument::make('date')
-                ->description('The date to summarize (YYYY-MM-DD)')
-                ->required(),
+            new Argument(
+                name: 'date',
+                description: 'The date to summarize (YYYY-MM-DD)',
+                required: true,
+            ),
         ];
     }
 }

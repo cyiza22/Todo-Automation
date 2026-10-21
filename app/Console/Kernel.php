@@ -13,6 +13,8 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+        // Run the AI automation every morning at 7:00 AM automatically
+        $schedule->command('tasks:review-automation')->dailyAt('07:00');
     }
 
     /**
