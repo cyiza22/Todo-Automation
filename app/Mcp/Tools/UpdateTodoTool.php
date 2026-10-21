@@ -20,19 +20,19 @@ class UpdateTodoTool extends Tool
     /**
      * Handle the tool request.
      */
-    public function handle(array $arguments): Response
+    public function handle(Request $request): Response
     {
-        $todo = Todo::find($arguments['id']);
+        $todo = Todo::find($request->get('id'));
 
         if (!$todo) {
             return Response::text('Task not found.');
         }
 
         $todo->update([
-            'title' => $arguments['title'] ?? $todo->title,
-            'description' => $arguments['description'] ?? $todo->description,
-            'due_date' => $arguments['due_date'] ?? $todo->due_date,
-            'completed' => $arguments['completed'] ?? $todo->completed,
+            'title' => $request->get('title', $todo->title),
+            'description' => $request->get('description', $todo->description),
+            'due_date' => $request->get('due_date', $todo->due_date),
+            'completed' => $request->get('completed', $todo->completed),
         ]);
 
         return Response::json($todo);

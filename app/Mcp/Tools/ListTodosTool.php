@@ -20,14 +20,14 @@ class ListTodosTool extends Tool
     /**
      * Handle the tool request.
      */
-    public function handle(array $arguments): Response
+    public function handle(Request $request): Response
     {
         $todos = Todo::query()
-            ->when(isset($arguments['completed']), function ($query) use ($arguments) {
-                $query->where('completed', $arguments['completed']);
+            ->when($request->get('completed') !== null, function ($query) use ($request) {
+                $query->where('completed', $request->get('completed'));
             })
-            ->when(isset($arguments['due_date']), function ($query) use ($arguments) {
-                $query->whereDate('due_date', $arguments['due_date']);
+            ->when($request->get('due_date'), function ($query) use ($request) {
+                $query->whereDate('due_date', $request->get('due_date'));
             })
             ->get();
 

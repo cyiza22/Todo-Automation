@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Prompts\DailySummaryPrompt;
 use App\Mcp\Tools\CreateTodoTool;
 use App\Mcp\Tools\DeleteTodoTool;
 use App\Mcp\Tools\ListTodosTool;
@@ -55,6 +56,6 @@ class TodoServer extends Server
      * @var array<int, class-string<\Laravel\Mcp\Server\Prompt>>
      */
     protected array $prompts = [
-        //
+        DailySummaryPrompt::class,
     ];
 }

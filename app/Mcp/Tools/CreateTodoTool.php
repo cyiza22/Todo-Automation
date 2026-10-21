@@ -4,7 +4,6 @@ namespace App\Mcp\Tools;
 
 use App\Models\Todo;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\Schema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -22,16 +21,20 @@ class CreateTodoTool extends Tool
     /**
      * Handle the tool request.
      */
-    public function handle(array $arguments): Response
+    public function handle(Request $request): Response
     {
-        Todo::create([
-            'title' => $arguments['title'],
-            'description' => $arguments['description'],
-            'due_date' => $arguments['due_date'] ?? null,
-            'completed' => $arguments['completed'] ?? false,
+        $todo = Todo::create([
+            'title' => $request->get('title'),
+            'description' => $request->get('description'),
+            'due_date' => $request->get('due_date'),
+            'completed' => $request->get('completed', false),
         ]);
 
-        return Response::text('successfully created a new task.');
+        return Response::json([
+            'message' => 'Successfully created a new task.',
+            'todo' => $todo,
+        ]);
+               
     }
 
     /**

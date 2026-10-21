@@ -14,4 +14,9 @@ class Todo extends Model
         'due_date', 
         'completed'
     ];
+
+    protected $casts = [
+        'due_date' => 'date',
+        'completed' => 'boolean',
+    ];
 }
