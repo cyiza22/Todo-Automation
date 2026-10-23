@@ -112,6 +112,8 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    'task_alert_recipient' => env('EMAIL_ADDRESS'),
+
     /*
     |--------------------------------------------------------------------------
     | Markdown Mail Settings

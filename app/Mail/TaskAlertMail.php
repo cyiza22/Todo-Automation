@@ -2,8 +2,6 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -11,15 +9,22 @@ use Illuminate\Queue\SerializesModels;
 
 class TaskAlertMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public string $summaryText;
+    public string $emailContent;
+    protected string $subjectLine;
+
+    public function __construct(string $summaryText, string $emailContent, ?string $subjectLine = null)
     {
-        //
+        $this->summaryText = $summaryText;
+        $this->emailContent = $emailContent;
+        $this->subjectLine = $subjectLine ?? 'Daily Task Automation Summary & Alerts';
     }
+    
 
     /**
      * Get the message envelope.
@@ -27,7 +32,7 @@ class TaskAlertMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Task Alert Mail',
+            subject: $this->subjectLine,
         );
     }
 
@@ -37,7 +42,10 @@ class TaskAlertMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'email',
+            with: [
+                'summaryText' => $this->summaryText . "\n\n" . $this->emailContent,
+            ],
         );
     }
 

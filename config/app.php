@@ -72,6 +72,8 @@ return [
 
     'timezone' => 'UTC',
 
+    'task_timezone' => env('TASK_TIMEZONE', 'Africa/Kigali'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

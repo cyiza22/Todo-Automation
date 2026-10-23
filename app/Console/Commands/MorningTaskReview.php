@@ -3,80 +3,82 @@
 namespace App\Console\Commands;
 
 use App\Mail\TaskAlertMail;
+use App\Mcp\Prompts\DailySummaryPrompt;
 use App\Models\Todo;
 use Carbon\Carbon;
+use Gemini\Exceptions\ErrorException as GeminiErrorException;
 use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
 class MorningTaskReview extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'app:morning-task-review';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
+    protected $description = 'Review today\'s tasks and send a summary email';
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    public function handle(): int
     {
-        // 1. Fetch pending tasks from database (simulating what the MCP tool would hand over)
-        $tasks = Todo::where('completed', false)
-            ->whereDate('due_date', Carbon::today())
+        $timezone = config('app.task_timezone', config('app.timezone'));
+        $todayStart = Carbon::now($timezone)->startOfDay();
+        $tomorrowStart = $todayStart->copy()->addDay();
+
+        $tasks = Todo::query()
+            ->where('completed', false)
+            ->where('due_date', '>=', $todayStart->copy()->utc())
+            ->where('due_date', '<', $tomorrowStart->copy()->utc())
             ->get();
 
         if ($tasks->isEmpty()) {
             $this->info('No tasks due today.');
-            return;
+
+            return self::SUCCESS;
         }
 
-        // 2. Format tasks into a context payload for the free AI model
-        $taskContext = $tasks->map(function ($task) {
-            return "- Task: {$task->title} | Due: {$task->due_date}";
-        })->implode("\n");
+        $dailySummaryPrompt = app(DailySummaryPrompt::class);
+        $prompt = $dailySummaryPrompt->buildPrompt($tasks, $timezone);
 
-        // 3. Draft prompt for the AI to summarize
-        $prompt = "You are an automated task supervisor assistant. Review the following tasks due today:\n\n"
-                . $taskContext . "\n\n"
-                . "Provide a brief, encouraging morning summary paragraph of what needs to be done.";
+        try {
+            $response = Gemini::generativeModel(model: 'gemini-3.8-flash')->generateContent($prompt);
+            $summaryText = $response->text();
+            $this->info('Morning AI summary generated successfully.');
+        } catch (GeminiErrorException $exception) {
+            $taskContext = $dailySummaryPrompt->formatTaskContext($tasks, $timezone);
+            $summaryText = "AI summary is temporarily unavailable. Tasks due today:\n\n{$taskContext}";
+            $this->warn('Gemini is temporarily unavailable; sending the task list without an AI summary.');
+        }
 
-        // 4. Call the free tier model
-        $response = Gemini::gemini15Flash()->generateContent($prompt);
-        $summaryText = $response->text();
+        $now = Carbon::now($timezone);
+        $twoHoursFromNow = $now->copy()->addHours(2);
 
-        $this->info("Morning AI Summary generated successfully.");
+        $criticalTasks = $tasks->filter(function (Todo $task) use ($now, $twoHoursFromNow, $timezone) {
+            $dueAt = $task->due_date?->copy()->timezone($timezone);
 
-        // 5. Check for critical tasks due within the next 2 hours
-        $now = Carbon::now();
-        $twoHoursFromNow = Carbon::now()->addHours(2);
-
-        $criticalTasks = $tasks->filter(function ($task) use ($now, $twoHoursFromNow) {
-            if (!$task->due_date) return false;
-            $dueTime = Carbon::parse($task->due_date);
-            return $dueTime->between($now, $twoHoursFromNow);
+            return $dueAt && $dueAt->between($now, $twoHoursFromNow);
         });
 
-        // 6. Automate Email Alert if critical items exist
+        $emailContent = '';
         if ($criticalTasks->isNotEmpty()) {
-            $emailContent = "### Urgent Task Alert\n\nYou have tasks due within the next 2 hours:\n\n";
+            $emailContent = "Urgent Task Alert\n\nYou have tasks due within the next 2 hours:\n\n";
+
             foreach ($criticalTasks as $task) {
-                $emailContent .= "- **{$task->title}** (Due: " . Carbon::parse($task->due_date)->format('H:i') . ")\n";
+                $dueAt = $task->due_date->copy()->timezone($timezone);
+                $emailContent .= "- {$task->title} (Due: {$dueAt->format('H:i')})\n";
             }
-            
-            // Send the email automatically
-            Mail::to('your-email@example.com')->send(new TaskAlertMail($summaryText, $emailContent));
-            $this->info("Urgent reminder email sent!");
         }
-    
+
+        $recipient = config('mail.task_alert_recipient');
+        if (!$recipient) {
+            $this->error('EMAIL_ADDRESS is not configured.');
+
+            return self::FAILURE;
+        }
+
+        Mail::to($recipient)->send(new TaskAlertMail($summaryText, $emailContent));
+        $this->info($criticalTasks->isNotEmpty()
+            ? 'Daily summary and urgent task alert email sent.'
+            : 'Daily summary email sent. No tasks are due within the next two hours.');
+
+        return self::SUCCESS;
     }
 }

@@ -43,7 +43,7 @@ class ListTodosTool extends Tool
     {
         return [
             'completed' => $schema->boolean()->default(false)->description('Indicates whether to include completed tasks.'),
-            'due_date' => $schema->string()->format('date')->description('The due date for the to-do task (YYYY-MM-DD).'),
+            'due_date' => $schema->string()->format('date')->description('Filter tasks due on this date (YYYY-MM-DD).'),
         ];
     }
 }
