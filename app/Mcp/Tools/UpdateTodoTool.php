@@ -16,7 +16,7 @@ class UpdateTodoTool extends Tool
      * The tool's description.
      */
     protected string $description = <<<'MARKDOWN'
-        Update a to-do task. Include both the calendar date and time in due_date, for example 2026-10-24T14:30:00.
+        Update a to-do task
     MARKDOWN;
 
     /**
@@ -59,7 +59,7 @@ class UpdateTodoTool extends Tool
             'id' => $schema->string()->description('The ID of the to-do task to update.'),
             'title' => $schema->string()->description('The title of the to-do task.'),
             'description' => $schema->string()->description('A detailed description of the to-do task.'),
-            'due_date' => $schema->string()->format('date-time')->description('Date and optional time when the task is due, e.g. 2026-10-24T14:30:00. Use the task timezone.'),
+            'due_date' => $schema->string()->format('date-time')->description('Date and optional time when the task is due, e.g. 2026-10-24T14:30:00'),
             'completed' => $schema->boolean()->default(false)->description('Indicates whether the to-do task is completed.'),
         ];
     }

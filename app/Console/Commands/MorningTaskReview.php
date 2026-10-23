@@ -29,33 +29,37 @@ class MorningTaskReview extends Command
             ->where('due_date', '<', $tomorrowStart->copy()->utc())
             ->get();
 
-        if ($tasks->isEmpty()) {
-            $this->info('No tasks due today.');
-
-            return self::SUCCESS;
-        }
-
         $dailySummaryPrompt = app(DailySummaryPrompt::class);
-        $prompt = $dailySummaryPrompt->buildPrompt($tasks, $timezone);
+        if ($tasks->isEmpty()) {
+            $summaryText = 'No incomplete tasks are due today.';
+        } else {
+            $prompt = $dailySummaryPrompt->buildPrompt($tasks, $timezone);
 
-        try {
-            $response = Gemini::generativeModel(model: 'gemini-3.8-flash')->generateContent($prompt);
-            $summaryText = $response->text();
-            $this->info('Morning AI summary generated successfully.');
-        } catch (GeminiErrorException $exception) {
-            $taskContext = $dailySummaryPrompt->formatTaskContext($tasks, $timezone);
-            $summaryText = "AI summary is temporarily unavailable. Tasks due today:\n\n{$taskContext}";
-            $this->warn('Gemini is temporarily unavailable; sending the task list without an AI summary.');
+            try {
+                $response = Gemini::generativeModel(model: 'gemini-3.8-flash')->generateContent($prompt);
+                $summaryText = $response->text();
+                $this->info('Morning AI summary generated successfully.');
+            } catch (GeminiErrorException $exception) {
+                $taskContext = $dailySummaryPrompt->formatTaskContext($tasks, $timezone);
+                $summaryText = "AI summary is temporarily unavailable. Tasks due today:\n\n{$taskContext}";
+                $this->warn('Gemini is temporarily unavailable; sending the task list without an AI summary.');
+            }
         }
 
         $now = Carbon::now($timezone);
         $twoHoursFromNow = $now->copy()->addHours(2);
 
-        $criticalTasks = $tasks->filter(function (Todo $task) use ($now, $twoHoursFromNow, $timezone) {
-            $dueAt = $task->due_date?->copy()->timezone($timezone);
+        $criticalTasks = Todo::query()
+            ->where('completed', false)
+            ->where('due_date', '>=', $now->copy()->utc())
+            ->where('due_date', '<=', $twoHoursFromNow->copy()->utc())
+            ->get();
 
-            return $dueAt && $dueAt->between($now, $twoHoursFromNow);
-        });
+        if ($tasks->isEmpty() && $criticalTasks->isEmpty()) {
+            $this->info('No tasks due today or within the next two hours.');
+
+            return self::SUCCESS;
+        }
 
         $emailContent = '';
         if ($criticalTasks->isNotEmpty()) {

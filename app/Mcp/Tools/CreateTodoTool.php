@@ -17,7 +17,7 @@ class CreateTodoTool extends Tool
      */
     protected string $name = 'create_todo';
     protected string $description = <<<'MARKDOWN'
-        Create a new to-do task item with an optional due date and time. Include both the calendar date and time in due_date, for example 2026-10-24T14:30:00.
+        Create a new to-do task item 
     MARKDOWN;
 
     /**
@@ -57,7 +57,7 @@ class CreateTodoTool extends Tool
         return [
             'title' => $schema->string()->description('The title of the to-do task.'),
             'description' => $schema->string()->description('A detailed description of the to-do task.'),
-            'due_date' => $schema->string()->format('date-time')->description('Date and optional time when the task is due, e.g. 2026-10-24T14:30:00. Use the task timezone.'),
+            'due_date' => $schema->string()->format('date-time')->description('Date and optional time when the task is due, e.g. 2026-10-24T14:30:00'),
             'completed' => $schema->boolean()->default(false)->description('Indicates whether the to-do task is completed.'),
         ];
     }
