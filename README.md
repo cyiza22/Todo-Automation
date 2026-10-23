@@ -44,24 +44,23 @@ Todo Automation is a Laravel application for keeping track of tasks and automati
 
    Set `EMAIL_ADDRESS` to an inbox you control. Configure `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`, and `MAIL_FROM_ADDRESS` for your mail provider. For local development, a mail catcher such as Mailpit can be used.
 
-4. Create the database tables and build the frontend assets:
+4. Create the database tables:
 
    ```sh
    php artisan migrate
-   npm run build
    ```
 
-5. Start the Laravel development server:
+## Open the MCP server
 
-   ```sh
-   php artisan serve
-   ```
+Use Laravel MCP's inspector to connect to the registered `todo` server and manage tasks:
 
-   Visit <http://127.0.0.1:8000>. During frontend development, use `npm run dev` in a separate terminal for Vite's development server.
+```sh
+php artisan mcp:inspector toodo
+```
 
 ## MCP server
 
-The project registers a local MCP server named `todo` and a web MCP endpoint at `/mcp/todo`. The web endpoint uses Sanctum authentication (`auth:sanctum`), so configure an authenticated client before connecting to it. The server provides these tools:
+The project registers a local MCP server named `todo` and a web MCP endpoint at `/mcp/todo`. The server provides these tools:
 
 | Tool | Purpose |
 | --- | --- |
