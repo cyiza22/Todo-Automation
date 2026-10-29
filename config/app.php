@@ -72,7 +72,7 @@ return [
 
     'timezone' => 'Africa/Kigali',
 
-    'task_timezone' => env('TASK_TIMEZONE', '  Africa/Kigali'),
+    'task_timezone' => env('TASK_TIMEZONE', 'Africa/Kigali'),
 
     /*
     |--------------------------------------------------------------------------

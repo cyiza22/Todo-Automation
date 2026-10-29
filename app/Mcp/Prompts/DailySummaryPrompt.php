@@ -11,37 +11,28 @@ use Laravel\Mcp\Server\Prompts\Argument;
 
 class DailySummaryPrompt extends Prompt
 {
-    /**
-     * The prompt's description.
-     */
-    protected string $description = <<<'MARKDOWN'
-       provides a daily summary of the tasks
-    MARKDOWN;
+    protected string $description = 'provides a daily summary of the tasks';
 
-    /**
-     * Handle the prompt request.
-     */
     public function handle(Request $request): Response
     {
         $timezone = config('app.task_timezone', config('app.timezone'));
-        $date = Carbon::parse($request->get('date'), $timezone);
-        $start = $date->copy()->startOfDay();
-        $end = $start->copy()->addDay();
+        
+        // 1. Explicitly initialize the requested date in Africa/Kigali time
+        $localDate = Carbon::createFromFormat('Y-m-d', $request->get('date'), $timezone);
+        
+        // 2. Bound the day strictly using the target local timezone boundaries
+        $startUtc = $localDate->copy()->startOfDay()->setTimezone('UTC');
+        $endUtc = $localDate->copy()->endOfDay()->setTimezone('UTC');
 
         $tasks = Todo::query()
             ->where('completed', false)
-            ->where('due_date', '>=', $start->copy()->utc())
-            ->where('due_date', '<', $end->copy()->utc())
+            ->where('due_date', '>=', $startUtc)
+            ->where('due_date', '<=', $endUtc)
             ->get();
 
         return Response::text($this->buildPrompt($tasks, $timezone));
     }
 
-    /**
-     * Build the instruction text used to summarize a collection of tasks.
-     *
-     * @param  iterable<Todo>  $tasks
-     */
     public function buildPrompt(iterable $tasks, string $timezone): string
     {
         $taskContext = $this->formatTaskContext($tasks, $timezone);
@@ -51,23 +42,16 @@ class DailySummaryPrompt extends Prompt
             . 'Provide a brief, encouraging morning summary paragraph of what needs to be done.';
     }
 
-    /**
-     * @param  iterable<Todo>  $tasks
-     */
     public function formatTaskContext(iterable $tasks, string $timezone): string
     {
         return collect($tasks)->map(function (Todo $task) use ($timezone) {
-            $due = $task->due_date?->copy()->timezone($timezone)->format('Y-m-d H:i') ?? 'No due time';
+            // 3. Shift the stored UTC timestamp back to Africa/Kigali for presentation
+            $due = $task->due_date ? Carbon::parse($task->due_date)->setTimezone($timezone)->format('Y-m-d H:i') : 'No due time';
 
             return "- Task: {$task->title} | Due: {$due}";
         })->implode("\n");
     }
 
-    /**
-     * Get the prompt's arguments.
-     *
-     * @return array<int, \Laravel\Mcp\Server\Prompts\Argument>
-     */
     public function arguments(): array
     {
         return [
