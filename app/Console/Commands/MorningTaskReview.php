@@ -46,31 +46,6 @@ class MorningTaskReview extends Command
             }
         }
 
-        $now = Carbon::now($timezone);
-        $twoHoursFromNow = $now->copy()->addHours(2);
-
-        $criticalTasks = Todo::query()
-            ->where('completed', false)
-            ->where('due_date', '>=', $now->copy()->utc())
-            ->where('due_date', '<=', $twoHoursFromNow->copy()->utc())
-            ->get();
-
-        if ($tasks->isEmpty() && $criticalTasks->isEmpty()) {
-            $this->info('No tasks due today or within the next two hours.');
-
-            return self::SUCCESS;
-        }
-
-        $emailContent = '';
-        if ($criticalTasks->isNotEmpty()) {
-            $emailContent = "Urgent Task Alert\n\nYou have tasks due within the next 2 hours:\n\n";
-
-            foreach ($criticalTasks as $task) {
-                $dueAt = $task->due_date->copy()->timezone($timezone);
-                $emailContent .= "- {$task->title} (Due: {$dueAt->format('H:i')})\n";
-            }
-        }
-
         $recipient = config('mail.task_alert_recipient');
         if (!$recipient) {
             $this->error('EMAIL_ADDRESS is not configured.');
@@ -78,10 +53,8 @@ class MorningTaskReview extends Command
             return self::FAILURE;
         }
 
-        Mail::to($recipient)->send(new TaskAlertMail($summaryText, $emailContent));
-        $this->info($criticalTasks->isNotEmpty()
-            ? 'Daily summary and urgent task alert email sent.'
-            : 'Daily summary email sent. No tasks are due within the next two hours.');
+        Mail::to($recipient)->send(new TaskAlertMail($summaryText, '', 'Your morning task summary'));
+        $this->info('Morning task summary email sent.');
 
         return self::SUCCESS;
     }

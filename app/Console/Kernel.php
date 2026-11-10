@@ -13,10 +13,16 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
-        // Run the daily task summary.
+        // Send the morning summary once a day.
         $schedule->command('app:morning-task-review')
-            ->dailyAt('14:59')
-            ->timezone(config('app.task_timezone'))
+            ->dailyAt('07:00')
+            ->timezone(config('app.task_timezone', config('app.timezone')))
+            ->withoutOverlapping();
+
+        // Check regularly for tasks entering the next two-hour window.
+        $schedule->command('app:due-soon-task-alert')
+            ->everyFifteenMinutes()
+            ->timezone(config('app.task_timezone', config('app.timezone')))
             ->withoutOverlapping();
     }
 
