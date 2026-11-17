@@ -53,7 +53,7 @@ class MorningTaskReview extends Command
             return self::FAILURE;
         }
 
-        Mail::to($recipient)->send(new TaskAlertMail($summaryText, '', 'Your morning task summary'));
+        Mail::to($recipient)->queue(new TaskAlertMail($summaryText, '', 'Your morning task summary'));
         $this->info('Morning task summary email sent.');
 
         return self::SUCCESS;

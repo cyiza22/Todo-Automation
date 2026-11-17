@@ -47,7 +47,7 @@ class DueSoonTaskAlert extends Command
             $emailContent .= "- {$task->title} (Due: {$dueAt->format('D, M j · H:i')})\n";
         }
 
-        Mail::to($recipient)->send(new TaskAlertMail('', $emailContent, 'Tasks due in the next 2 hours'));
+        Mail::to($recipient)->queue(new TaskAlertMail('', $emailContent, 'Tasks due in the next 2 hours'));
 
         foreach ($unalertedTasks as $task) {
             $secondsUntilDue = max(60, $now->diffInSeconds($task->due_date->copy()->setTimezone($timezone), false));

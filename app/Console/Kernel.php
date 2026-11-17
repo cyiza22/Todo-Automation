@@ -15,7 +15,7 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         // Send the morning summary once a day.
         $schedule->command('app:morning-task-review')
-            ->dailyAt('10:19')
+            ->dailyAt('07:00')
             ->timezone(config('app.task_timezone', config('app.timezone')))
             ->withoutOverlapping();
 
