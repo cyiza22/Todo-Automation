@@ -42,15 +42,14 @@ class TaskAlertMail extends Mailable
      */
     public function content(): Content
     {
-        $body = implode("\n\n", array_filter([
-            trim($this->summaryText),
-            trim($this->emailContent),
-        ]));
-
         return new Content(
             view: 'email',
             with: [
-                'summaryText' => $body,
+                'summaryText' => trim(implode("\n\n", array_filter([
+                    $this->summaryText,
+                    $this->emailContent,
+                ], fn (string $content): bool => trim($content) !== ''))),
+                'subjectLine' => $this->subjectLine,
             ],
         );
     }
