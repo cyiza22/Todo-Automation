@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -9,7 +10,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TaskAlertMail extends Mailable
 {
-    use SerializesModels;
+    use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
@@ -41,14 +42,18 @@ class TaskAlertMail extends Mailable
      */
     public function content(): Content
     {
+        $body = implode("\n\n", array_filter([
+            trim($this->summaryText),
+            trim($this->emailContent),
+        ]));
+
         return new Content(
             view: 'email',
             with: [
-                'summaryText' => $this->summaryText . "\n\n" . $this->emailContent,
+                'summaryText' => $body,
             ],
         );
     }
-
     /**
      * Get the attachments for the message.
      *
