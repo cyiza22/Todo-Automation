@@ -44,11 +44,10 @@ class TaskAlertMail extends Mailable
     {
         return new Content(
             view: 'email',
+            text: 'email-text',
             with: [
-                'summaryText' => trim(implode("\n\n", array_filter([
-                    $this->summaryText,
-                    $this->emailContent,
-                ], fn (string $content): bool => trim($content) !== ''))),
+                'summaryText' => $this->summaryText,
+                'emailContent' => $this->emailContent,
                 'subjectLine' => $this->subjectLine,
             ],
         );
