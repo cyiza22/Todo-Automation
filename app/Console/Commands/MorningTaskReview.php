@@ -74,7 +74,10 @@ class MorningTaskReview extends Command
         }
 
         Mail::to($recipient)->queue(new TaskAlertMail($summaryText, '', 'Your morning task summary'));
-        $this->info('Morning task summary email sent.');
+        $message = config('queue.default') === 'sync'
+            ? 'Morning task summary email handed to the mailer.'
+            : 'Morning task summary email queued. Run `php artisan queue:work` to deliver it.';
+        $this->info($message);
 
         return self::SUCCESS;
     }

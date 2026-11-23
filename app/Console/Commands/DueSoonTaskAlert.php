@@ -54,7 +54,10 @@ class DueSoonTaskAlert extends Command
             Cache::put($this->cacheKey($task), true, $secondsUntilDue + 86400);
         }
 
-        $this->info('Due-soon task alert email sent.');
+        $message = config('queue.default') === 'sync'
+            ? 'Due-soon task alert email handed to the mailer.'
+            : 'Due-soon task alert email queued. Run `php artisan queue:work` to deliver it.';
+        $this->info($message);
 
         return self::SUCCESS;
     }

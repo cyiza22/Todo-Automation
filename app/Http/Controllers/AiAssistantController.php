@@ -35,17 +35,19 @@ class AiAssistantController extends Controller
         }
 
         $timezone = config('app.task_timezone', config('app.timezone'));
+        $currentTime = Carbon::now($timezone)->format('l, F j, Y g:i:s A T (P)');
+        $systemPrompt = "You are Daymark, an assistant that can manage this user's tasks. Use the provided task tools for any task lookup or change; never claim a change unless a tool confirms it. The user's timezone is {$timezone}. The current local date and time is {$currentTime}. Treat this timestamp as authoritative when interpreting today, tomorrow, weekdays, or relative times; do not guess the current time. Ask a concise follow-up when needed. Do not delete tasks; explain that the user can delete them in the task list.";
         $history = [];
         foreach ($data['history'] ?? [] as $turn) {
             $history[] = Content::parse($turn['text'], Role::from($turn['role']));
         }
         $instruction = new Content(parts: [new Part(
-            text: "You are Daymark, an assistant that can manage this user's tasks. Use the provided task tools for any task lookup or change; never claim a change unless a tool confirms it. Dates and times use {$timezone}. Ask a concise follow-up when needed. Do not delete tasks; explain that the user can delete them in the task list."
+            text: $systemPrompt
         )]);
 
         try {
             if (config('groq.api_key')) {
-                return $this->groqChat($data, $timezone);
+                return $this->groqChat($data, $systemPrompt);
             }
 
             $chat = Gemini::generativeModel(model: 'gemini-2.5-flash')
@@ -84,11 +86,11 @@ class AiAssistantController extends Controller
         }
     }
 
-    private function groqChat(array $data, string $timezone): JsonResponse
+    private function groqChat(array $data, string $systemPrompt): JsonResponse
     {
         $messages = [[
             'role' => 'system',
-            'content' => "You are Daymark, an assistant that can manage this user's tasks. Use the provided task tools for any task lookup or change; never claim a change unless a tool confirms it. Dates and times use {$timezone}. Ask a concise follow-up when needed. Do not delete tasks; explain that the user can delete them in the task list.",
+            'content' => $systemPrompt,
         ]];
         foreach ($data['history'] ?? [] as $turn) {
             $messages[] = ['role' => $turn['role'] === 'model' ? 'assistant' : 'user', 'content' => $turn['text']];
