@@ -6,9 +6,9 @@ use App\Mail\TaskAlertMail;
 use App\Mcp\Prompts\DailySummaryPrompt;
 use App\Models\Todo;
 use Carbon\Carbon;
-use Gemini\Exceptions\ErrorException as GeminiErrorException;
 use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
 class MorningTaskReview extends Command
@@ -36,13 +36,33 @@ class MorningTaskReview extends Command
             $prompt = $dailySummaryPrompt->buildPrompt($tasks, $timezone);
 
             try {
-                $response = Gemini::generativeModel(model: 'gemini-3.8-flash')->generateContent($prompt);
-                $summaryText = $response->text();
+                if (config('groq.api_key')) {
+                    $response = Http::withToken(config('groq.api_key'))->acceptJson()
+                        ->timeout((int) config('groq.request_timeout', 30))
+                        ->post(rtrim(config('groq.base_url'), '/').'/chat/completions', [
+                            'model' => config('groq.model'),
+                            'messages' => [['role' => 'user', 'content' => $prompt]],
+                        ])->throw()->json();
+                    $summaryText = $response['choices'][0]['message']['content'] ?? '';
+                } else {
+                    $response = Gemini::generativeModel(model: 'gemini-2.5-flash')->generateContent($prompt);
+                    $summaryText = $response->text();
+                }
                 $this->info('Morning AI summary generated successfully.');
-            } catch (GeminiErrorException $exception) {
-                $taskContext = $dailySummaryPrompt->formatTaskContext($tasks, $timezone);
-                $summaryText = "AI summary is temporarily unavailable. Tasks due today:\n\n{$taskContext}";
-                $this->warn('Gemini is temporarily unavailable; sending the task list without an AI summary.');
+            } catch (\Throwable $exception) {
+                if (config('groq.api_key') && config('gemini.api_key')) {
+                    try {
+                        $summaryText = Gemini::generativeModel(model: 'gemini-2.5-flash')->generateContent($prompt)->text();
+                        $this->warn('Groq is unavailable; generated the summary with Gemini.');
+                    } catch (\Throwable) {
+                        $summaryText = '';
+                    }
+                }
+                if (empty($summaryText)) {
+                    $taskContext = $dailySummaryPrompt->formatTaskContext($tasks, $timezone);
+                    $summaryText = "AI summary is temporarily unavailable. Tasks due today:\n\n{$taskContext}";
+                    $this->warn('AI providers are unavailable; sending the task list without an AI summary.');
+                }
             }
         }
 
